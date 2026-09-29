@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CHARM Smartwatch</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+  <main class="watch">
+
+    <section class="screen">
+
+      <!-- ESTADO DEL RELOJ -->
+      <header class="status-bar">
+        <span id="clock">09:41</span>
+
+        <button
+          id="themeButton"
+          class="theme-button"
+          onclick="toggleTheme()"
+          aria-label="Cambiar tema"
+        >
+          ☀️
+        </button>
+
+        <span>🔋 100%</span>
+      </header>
+
+
+      <!-- EVENTO -->
+      <section class="event-header">
+
+        <span class="brand">CHARM ✦</span>
+
+        <h1>Festival<br>Universitario</h1>
+
+        <p>Hoy · 12 actividades</p>
+
+      </section>
+
+
+      <!-- ACTIVIDAD ACTUAL -->
+      <section class="current-card">
+
+        <div class="current-label">
+          <span class="live-dot"></span>
+          AHORA
+        </div>
+
+        <h2>Conferencia<br>de Diseño</h2>
+
+        <div class="event-details">
+          <span>11:00 – 12:00</span>
+          <span>📍 Auditorio A</span>
+        </div>
+
+      </section>
+
+
+      <!-- PRÓXIMA ACTIVIDAD -->
+      <section class="next-card">
+
+        <div>
+
+          <span class="label">
+            SIGUIENTE
+          </span>
+
+          <h3>Taller de Fotografía</h3>
+
+          <p>12:30 · Sala Creativa</p>
+
+        </div>
+
+        <button
+          class="next-button"
+          onclick="showNextEvent()"
+          aria-label="Ver próxima actividad"
+        >
+          ›
+        </button>
+
+      </section>
+
+
+      <!-- IA -->
+      <section class="ai-card">
+
+        <div class="ai-top">
+
+          <div class="ai-icon">
+            ✦
+          </div>
+
+          <div>
+
+            <span class="label">
+              PARA TI
+            </span>
+
+            <h3>Recomendación inteligente</h3>
+
+          </div>
+
+        </div>
+
+        <p id="aiRecommendation">
+          Según tus intereses, el Taller de Fotografía podría gustarte.
+        </p>
+
+        <button
+          class="ai-button"
+          onclick="generateRecommendation()"
+        >
+          ✨ Actualizar
+        </button>
+
+      </section>
+
+
+      <!-- ACCIONES RÁPIDAS -->
+      <section class="actions">
+
+        <button
+          class="action-button"
+          onclick="showNotification()"
+        >
+          <span>🔔</span>
+          <small>Alerta</small>
+        </button>
+
+        <button
+          class="action-button"
+          onclick="showFavorite()"
+        >
+          <span>♡</span>
+          <small>Guardar</small>
+        </button>
+
+        <button
+          class="action-button"
+          onclick="showLocation()"
+        >
+          <span>⌖</span>
+          <small>Mapa</small>
+        </button>
+
+      </section>
+
+
+      <!-- MENSAJES -->
+      <div
+        id="message"
+        class="message"
+        aria-live="polite"
+      ></div>
+
+    </section>
+
+  </main>
+
+
+  <script src="script.js"></script>
+
+</body>
+</html>

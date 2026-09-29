@@ -1,0 +1,527 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  :root {
+    --page-bg: #e7e2e5;
+    --watch-bg: #111014;
+    --screen-bg: #17151a;
+  
+    --card-bg: #242127;
+    --card-border: #363139;
+  
+    --text: #f8f4f6;
+    --muted: #a9a1aa;
+  
+    --accent: #e7a9c4;
+    --accent-dark: #38242e;
+  
+    --current-start: #dfa2bd;
+    --current-end: #bc7b9d;
+  }
+  
+  /* =========================
+     MODO CLARO
+  ========================= */
+  
+  body.light {
+    --page-bg: #e8e2e5;
+    --watch-bg: #d1ccd0;
+    --screen-bg: #faf7f9;
+  
+    --card-bg: #eee8ec;
+    --card-border: #d8cfd5;
+  
+    --text: #282229;
+    --muted: #756c74;
+  
+    --accent: #b96e94;
+    --accent-dark: #ffffff;
+  
+    --current-start: #e4aec8;
+    --current-end: #c98aaa;
+  }
+  
+  
+  /* =========================
+     PÁGINA
+  ========================= */
+  
+  body {
+    min-height: 100vh;
+  
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  
+    padding: 20px;
+  
+    background: var(--page-bg);
+  
+    font-family:
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+  
+    color: var(--text);
+  
+    transition:
+      background 0.3s ease;
+  }
+  
+  
+  /* =========================
+     RELOJ
+  ========================= */
+  
+  .watch {
+    width: 350px;
+    height: 570px;
+  
+    padding: 15px;
+  
+    border-radius: 52px;
+  
+    background: var(--watch-bg);
+  
+    box-shadow:
+      0 25px 60px rgba(0, 0, 0, 0.25);
+  
+    transition:
+      background 0.3s ease;
+  }
+  
+  
+  /* =========================
+     PANTALLA
+  ========================= */
+  
+  .screen {
+    width: 100%;
+    height: 100%;
+  
+    overflow-y: auto;
+  
+    padding: 18px;
+  
+    border-radius: 39px;
+  
+    background:
+      radial-gradient(
+        circle at top right,
+        rgba(218, 159, 191, 0.14),
+        transparent 35%
+      ),
+      var(--screen-bg);
+  
+    transition:
+      background 0.3s ease,
+      color 0.3s ease;
+  }
+  
+  .screen::-webkit-scrollbar {
+    width: 0;
+  }
+  
+  
+  /* =========================
+     BARRA SUPERIOR
+  ========================= */
+  
+  .status-bar {
+    display: flex;
+  
+    align-items: center;
+    justify-content: space-between;
+  
+    color: var(--muted);
+  
+    font-size: 11px;
+  
+    margin-bottom: 20px;
+  }
+  
+  .theme-button {
+    width: 30px;
+    height: 30px;
+  
+    border: 1px solid var(--card-border);
+  
+    border-radius: 50%;
+  
+    background: var(--card-bg);
+  
+    color: var(--text);
+  
+    cursor: pointer;
+  
+    font-size: 13px;
+  
+    transition: 0.2s ease;
+  }
+  
+  .theme-button:hover {
+    transform: scale(1.08);
+  }
+  
+  
+  /* =========================
+     ENCABEZADO
+  ========================= */
+  
+  .brand {
+    display: block;
+  
+    margin-bottom: 7px;
+  
+    color: var(--accent);
+  
+    font-size: 10px;
+  
+    font-weight: 800;
+  
+    letter-spacing: 2.5px;
+  }
+  
+  .event-header h1 {
+    font-size: 25px;
+  
+    line-height: 1.03;
+  
+    letter-spacing: -0.8px;
+  }
+  
+  .event-header p {
+    margin-top: 7px;
+  
+    color: var(--muted);
+  
+    font-size: 10px;
+  }
+  
+  
+  /* =========================
+     ACTIVIDAD ACTUAL
+  ========================= */
+  
+  .current-card {
+    margin-top: 18px;
+  
+    padding: 15px;
+  
+    border-radius: 21px;
+  
+    background:
+      linear-gradient(
+        135deg,
+        var(--current-start),
+        var(--current-end)
+      );
+  
+    color: #241a21;
+  }
+  
+  .current-label {
+    display: flex;
+  
+    align-items: center;
+  
+    gap: 6px;
+  
+    font-size: 8px;
+  
+    font-weight: 800;
+  
+    letter-spacing: 1.4px;
+  }
+  
+  .live-dot {
+    width: 6px;
+    height: 6px;
+  
+    border-radius: 50%;
+  
+    background: #54223d;
+  }
+  
+  .current-card h2 {
+    margin-top: 11px;
+  
+    font-size: 18px;
+  
+    line-height: 1.05;
+  }
+  
+  .event-details {
+    display: flex;
+  
+    justify-content: space-between;
+  
+    gap: 8px;
+  
+    margin-top: 12px;
+  
+    font-size: 9px;
+  
+    font-weight: 600;
+  }
+  
+  
+  /* =========================
+     SIGUIENTE ACTIVIDAD
+  ========================= */
+  
+  .next-card {
+    display: flex;
+  
+    align-items: center;
+  
+    justify-content: space-between;
+  
+    gap: 10px;
+  
+    margin-top: 9px;
+  
+    padding: 12px;
+  
+    border: 1px solid var(--card-border);
+  
+    border-radius: 19px;
+  
+    background: var(--card-bg);
+  }
+  
+  .label {
+    display: block;
+  
+    color: var(--muted);
+  
+    font-size: 8px;
+  
+    font-weight: 800;
+  
+    letter-spacing: 1.5px;
+  }
+  
+  .next-card h3 {
+    margin-top: 5px;
+  
+    font-size: 12px;
+  }
+  
+  .next-card p {
+    margin-top: 4px;
+  
+    color: var(--muted);
+  
+    font-size: 9px;
+  }
+  
+  .next-button {
+    width: 34px;
+    height: 34px;
+  
+    flex-shrink: 0;
+  
+    border: none;
+  
+    border-radius: 50%;
+  
+    background: var(--accent);
+  
+    color: var(--accent-dark);
+  
+    font-size: 24px;
+  
+    cursor: pointer;
+  }
+  
+  
+  /* =========================
+     IA
+  ========================= */
+  
+  .ai-card {
+    margin-top: 9px;
+  
+    padding: 13px;
+  
+    border: 1px solid var(--card-border);
+  
+    border-radius: 19px;
+  
+    background: var(--card-bg);
+  }
+  
+  .ai-top {
+    display: flex;
+  
+    align-items: center;
+  
+    gap: 9px;
+  }
+  
+  .ai-icon {
+    width: 32px;
+    height: 32px;
+  
+    display: flex;
+  
+    align-items: center;
+    justify-content: center;
+  
+    flex-shrink: 0;
+  
+    border-radius: 10px;
+  
+    background: var(--accent);
+  
+    color: var(--accent-dark);
+  
+    font-size: 15px;
+  }
+  
+  .ai-top h3 {
+    margin-top: 3px;
+  
+    font-size: 11px;
+  }
+  
+  .ai-card > p {
+    margin-top: 9px;
+  
+    color: var(--muted);
+  
+    font-size: 9px;
+  
+    line-height: 1.45;
+  }
+  
+  .ai-button {
+    width: 100%;
+  
+    min-height: 32px;
+  
+    margin-top: 9px;
+  
+    border: none;
+  
+    border-radius: 10px;
+  
+    background: var(--accent);
+  
+    color: var(--accent-dark);
+  
+    font-size: 9px;
+  
+    font-weight: 800;
+  
+    cursor: pointer;
+  
+    transition: 0.2s ease;
+  }
+  
+  .ai-button:hover {
+    transform: translateY(-1px);
+  }
+  
+  
+  /* =========================
+     ACCIONES
+  ========================= */
+  
+  .actions {
+    display: grid;
+  
+    grid-template-columns:
+      repeat(3, 1fr);
+  
+    gap: 7px;
+  
+    margin-top: 9px;
+  }
+  
+  .action-button {
+    min-height: 52px;
+  
+    border: 1px solid var(--card-border);
+  
+    border-radius: 15px;
+  
+    background: var(--card-bg);
+  
+    color: var(--text);
+  
+    cursor: pointer;
+  
+    transition: 0.2s ease;
+  }
+  
+  .action-button:hover {
+    transform: translateY(-1px);
+  }
+  
+  .action-button span {
+    display: block;
+  
+    margin-bottom: 3px;
+  
+    font-size: 15px;
+  }
+  
+  .action-button small {
+    color: var(--muted);
+  
+    font-size: 8px;
+  }
+  
+  
+  /* =========================
+     MENSAJE
+  ========================= */
+  
+  .message {
+    min-height: 25px;
+  
+    margin-top: 8px;
+  
+    text-align: center;
+  
+    color: var(--accent);
+  
+    font-size: 9px;
+  
+    line-height: 1.35;
+  }
+  
+  
+  /* =========================
+     PANTALLAS PEQUEÑAS
+  ========================= */
+  
+  @media (max-width: 450px) {
+  
+    body {
+      padding: 10px;
+  
+      align-items: flex-start;
+    }
+  
+    .watch {
+      width: 330px;
+      height: 550px;
+  
+      padding: 13px;
+    }
+  
+    .screen {
+      padding: 17px;
+    }
+  
+    .event-header h1 {
+      font-size: 23px;
+    }
+  }
