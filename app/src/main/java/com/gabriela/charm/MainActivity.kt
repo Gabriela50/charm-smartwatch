@@ -1,7 +1,20 @@
 
 package com.gabriela.charm
 
+import android.Manifest
+import android.content.ContentUris
+import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.provider.CalendarContract
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -34,6 +47,75 @@ private data class Tema(
     val borde: Color
 )
 
+private data class EventoReal(
+    val titulo: String,
+    val inicio: Long,
+    val todoElDia: Boolean
+)
+
+private fun leerEventosCalendario(context: Context): List<EventoReal> {
+    val ahora = System.currentTimeMillis()
+    val limite = ahora + 7L * 24 * 60 * 60 * 1000
+
+    val uriBuilder = CalendarContract.Instances.CONTENT_URI.buildUpon()
+    ContentUris.appendId(uriBuilder, ahora)
+    ContentUris.appendId(uriBuilder, limite)
+
+    val columnas = arrayOf(
+        CalendarContract.Instances.TITLE,
+        CalendarContract.Instances.BEGIN,
+        CalendarContract.Instances.ALL_DAY
+    )
+
+    val eventos = mutableListOf<EventoReal>()
+
+    try {
+        context.contentResolver.query(
+            uriBuilder.build(),
+            columnas,
+            null,
+            null,
+            "${CalendarContract.Instances.BEGIN} ASC"
+        )?.use { cursor ->
+            val indiceTitulo = cursor.getColumnIndexOrThrow(
+                CalendarContract.Instances.TITLE
+            )
+            val indiceInicio = cursor.getColumnIndexOrThrow(
+                CalendarContract.Instances.BEGIN
+            )
+            val indiceTodoElDia = cursor.getColumnIndexOrThrow(
+                CalendarContract.Instances.ALL_DAY
+            )
+
+            while (cursor.moveToNext()) {
+                eventos.add(
+                    EventoReal(
+                        titulo = cursor.getString(indiceTitulo)
+                            ?.takeIf { it.isNotBlank() }
+                            ?: "Evento sin título",
+                        inicio = cursor.getLong(indiceInicio),
+                        todoElDia = cursor.getInt(indiceTodoElDia) != 0
+                    )
+                )
+            }
+        }
+    } catch (_: Exception) {
+        // Si el calendario no está disponible, se mostrará la agenda vacía.
+    }
+
+    return eventos
+}
+
+private fun formatoHora(evento: EventoReal, ingles: Boolean): String {
+    val patron = if (evento.todoElDia) {
+        if (ingles) "EEE, MMM d" else "EEE d MMM"
+    } else {
+        "HH:mm"
+    }
+    val locale = if (ingles) Locale.ENGLISH else Locale("es", "CO")
+    return SimpleDateFormat(patron, locale).format(Date(evento.inicio))
+}
+
 private val temas = listOf(
     Tema(
         Color(0xFF10101C), Color(0xFF242238),
@@ -65,6 +147,22 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PantallaCHARM() {
+    val contexto = LocalContext.current
+    var permisoCalendario by remember {
+        mutableStateOf(
+            contexto.checkSelfPermission(Manifest.permission.READ_CALENDAR) ==
+                PackageManager.PERMISSION_GRANTED
+        )
+    }
+    var eventosReales by remember { mutableStateOf<List<EventoReal>>(emptyList()) }
+
+    val solicitarPermisoCalendario =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { concedido ->
+            permisoCalendario = concedido
+        }
+
     var pantalla by remember { mutableStateOf("inicio") }
     var ingles by remember { mutableStateOf(false) }
     var temaElegido by remember { mutableStateOf(0) }
@@ -85,6 +183,14 @@ fun PantallaCHARM() {
         Color(0xFFE2DCEF)
     )
     val evento = if (ingles) "Lights Festival" else "Festival de Luces"
+
+    LaunchedEffect(pantalla, permisoCalendario) {
+        if (pantalla == "agenda" && permisoCalendario) {
+            eventosReales = withContext(Dispatchers.IO) {
+                leerEventosCalendario(contexto)
+            }
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -292,12 +398,44 @@ fun PantallaCHARM() {
                     Spacer(Modifier.height(8.dp))
 
                     Tarjeta(t) {
-                        Agenda("07:30", if (ingles)
-                            "Festival opens" else "Apertura", t)
-                        Agenda("08:00", if (ingles)
-                            "Light show" else "Show de luces", t)
-                        Agenda("09:00", if (ingles)
-                            "Main performance" else "Presentación", t)
+                        if (!permisoCalendario) {
+                            Text(
+                                if (ingles)
+                                    "Allow calendar access to see your real events."
+                                else
+                                    "Autoriza el calendario para ver tus eventos reales.",
+                                color = t.texto,
+                                fontSize = 10.sp,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Acceso(
+                                if (ingles) "ALLOW CALENDAR" else "PERMITIR CALENDARIO",
+                                t
+                            ) {
+                                solicitarPermisoCalendario.launch(
+                                    Manifest.permission.READ_CALENDAR
+                                )
+                            }
+                        } else if (eventosReales.isEmpty()) {
+                            Text(
+                                if (ingles)
+                                    "No events found in the next 7 days."
+                                else
+                                    "No hay eventos en los próximos 7 días.",
+                                color = t.texto,
+                                fontSize = 10.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        } else {
+                            eventosReales.forEach { eventoReal ->
+                                Agenda(
+                                    formatoHora(eventoReal, ingles),
+                                    eventoReal.titulo,
+                                    t
+                                )
+                            }
+                        }
                     }
 
                     Spacer(Modifier.height(12.dp))
