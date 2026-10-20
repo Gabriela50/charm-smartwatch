@@ -1,0 +1,12 @@
+# Configuración local de Android SDK
+local.properties
+
+# Archivos generados por Gradle
+.gradle/
+build/
+app/build/
+
+# Archivos del sistema y del IDE
+.DS_Store
+.idea/
+*.iml
