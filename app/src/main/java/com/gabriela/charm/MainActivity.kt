@@ -1,4 +1,3 @@
-
 package com.gabriela.charm
 
 import android.Manifest
@@ -7,16 +6,10 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.CalendarContract
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -32,20 +25,18 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-private data class Tema(
-    val fondo: Color,
-    val tarjeta: Color,
-    val acento: Color,
-    val texto: Color,
-    val suave: Color,
-    val borde: Color
-)
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private data class EventoReal(
     val titulo: String,
@@ -53,56 +44,49 @@ private data class EventoReal(
     val todoElDia: Boolean
 )
 
+private data class Tema(
+    val fondo: Color,
+    val tarjeta: Color,
+    val acento: Color,
+    val texto: Color,
+    val suave: Color,
+    val borde: Color,
+    val acentoSecundario: Color
+)
+
 private fun leerEventosCalendario(context: Context): List<EventoReal> {
     val ahora = System.currentTimeMillis()
     val limite = ahora + 7L * 24 * 60 * 60 * 1000
-
     val uriBuilder = CalendarContract.Instances.CONTENT_URI.buildUpon()
     ContentUris.appendId(uriBuilder, ahora)
     ContentUris.appendId(uriBuilder, limite)
-
     val columnas = arrayOf(
         CalendarContract.Instances.TITLE,
         CalendarContract.Instances.BEGIN,
         CalendarContract.Instances.ALL_DAY
     )
-
     val eventos = mutableListOf<EventoReal>()
-
     try {
         context.contentResolver.query(
-            uriBuilder.build(),
-            columnas,
-            null,
-            null,
+            uriBuilder.build(), columnas, null, null,
             "${CalendarContract.Instances.BEGIN} ASC"
         )?.use { cursor ->
-            val indiceTitulo = cursor.getColumnIndexOrThrow(
-                CalendarContract.Instances.TITLE
-            )
-            val indiceInicio = cursor.getColumnIndexOrThrow(
-                CalendarContract.Instances.BEGIN
-            )
-            val indiceTodoElDia = cursor.getColumnIndexOrThrow(
-                CalendarContract.Instances.ALL_DAY
-            )
-
+            val titulo = cursor.getColumnIndexOrThrow(CalendarContract.Instances.TITLE)
+            val inicio = cursor.getColumnIndexOrThrow(CalendarContract.Instances.BEGIN)
+            val todoElDia = cursor.getColumnIndexOrThrow(CalendarContract.Instances.ALL_DAY)
             while (cursor.moveToNext()) {
                 eventos.add(
                     EventoReal(
-                        titulo = cursor.getString(indiceTitulo)
-                            ?.takeIf { it.isNotBlank() }
-                            ?: "Evento sin título",
-                        inicio = cursor.getLong(indiceInicio),
-                        todoElDia = cursor.getInt(indiceTodoElDia) != 0
+                        cursor.getString(titulo)?.takeIf { it.isNotBlank() } ?: "Evento sin título",
+                        cursor.getLong(inicio),
+                        cursor.getInt(todoElDia) != 0
                     )
                 )
             }
         }
     } catch (_: Exception) {
-        // Si el calendario no está disponible, se mostrará la agenda vacía.
+        // La pantalla de agenda informa si no hay eventos disponibles.
     }
-
     return eventos
 }
 
@@ -110,29 +94,41 @@ private fun formatoHora(evento: EventoReal, ingles: Boolean): String {
     val patron = if (evento.todoElDia) {
         if (ingles) "EEE, MMM d" else "EEE d MMM"
     } else {
-        "HH:mm"
+        if (ingles) "h:mm a" else "HH:mm"
     }
     val locale = if (ingles) Locale.ENGLISH else Locale("es", "CO")
     return SimpleDateFormat(patron, locale).format(Date(evento.inicio))
 }
 
-private val temas = listOf(
-    Tema(
-        Color(0xFF10101C), Color(0xFF242238),
-        Color(0xFFC4B0FF), Color(0xFFFFFAFF),
-        Color(0xFFB9B3CE), Color(0xFF51466F)
-    ),
-    Tema(
-        Color(0xFF101A20), Color(0xFF203039),
-        Color(0xFF9BE6D0), Color(0xFFF5FFFC),
-        Color(0xFFB7D0CA), Color(0xFF36564F)
-    ),
-    Tema(
-        Color(0xFF20151D), Color(0xFF382431),
-        Color(0xFFFFBFD7), Color(0xFFFFF8FC),
-        Color(0xFFD8B8C8), Color(0xFF694256)
+private fun crearTema(oscuro: Boolean, acentoElegido: Int): Tema {
+    val acentos = listOf(
+        Color(0xFF36E7FF), Color(0xFF8B7CFF), Color(0xFFFF70C8)
     )
-)
+    val acento = acentos[acentoElegido.coerceIn(0, 2)]
+    val secundario = when (acentoElegido) {
+        1 -> Color(0xFF43D9FF)
+        2 -> Color(0xFFFFB86B)
+        else -> Color(0xFF8B7CFF)
+    }
+    return if (oscuro) {
+        Tema(
+            Color(0xFF070B16), Color(0xFF111B2B), acento,
+            Color(0xFFF2F7FF), Color(0xFF9EADC4),
+            Color(0xFF263B53), secundario
+        )
+    } else {
+        Tema(
+            Color(0xFFF3F8FC), Color(0xFFFFFFFF),
+            when (acentoElegido) {
+                1 -> Color(0xFF6655D9)
+                2 -> Color(0xFFC0448B)
+                else -> Color(0xFF007F9B)
+            },
+            Color(0xFF142337), Color(0xFF65768C),
+            Color(0xFFD6E3EE), Color(0xFF5A72D8)
+        )
+    }
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -155,480 +151,269 @@ fun PantallaCHARM() {
         )
     }
     var eventosReales by remember { mutableStateOf<List<EventoReal>>(emptyList()) }
-
-    val solicitarPermisoCalendario =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { concedido ->
-            permisoCalendario = concedido
-        }
+    val solicitarPermisoCalendario = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { concedido -> permisoCalendario = concedido }
 
     var pantalla by remember { mutableStateOf("inicio") }
     var ingles by remember { mutableStateOf(false) }
-    var temaElegido by remember { mutableStateOf(0) }
+    var acentoElegido by remember { mutableStateOf(0) }
     var modoOscuro by remember { mutableStateOf(true) }
     var consejoIndex by remember { mutableStateOf(0) }
-
-    val base = temas[temaElegido]
-    val t = if (modoOscuro) base else Tema(
-        Color(0xFFF7F5FC),
-        Color(0xFFFFFFFF),
-        when (temaElegido) {
-            1 -> Color(0xFF287A66)
-            2 -> Color(0xFFB34476)
-            else -> Color(0xFF7050B5)
-        },
-        Color(0xFF29243A),
-        Color(0xFF625B70),
-        Color(0xFFE2DCEF)
-    )
-    val evento = if (ingles) "Lights Festival" else "Festival de Luces"
+    val t = crearTema(modoOscuro, acentoElegido)
+    val nombreEvento = if (ingles) "Lights Festival" else "Festival de Luces"
 
     LaunchedEffect(pantalla, permisoCalendario) {
         if (pantalla == "agenda" && permisoCalendario) {
-            eventosReales = withContext(Dispatchers.IO) {
-                leerEventosCalendario(contexto)
-            }
+            eventosReales = withContext(Dispatchers.IO) { leerEventosCalendario(contexto) }
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = t.fondo
-    ) {
-        Column(
-            modifier = Modifier
+    Surface(Modifier.fillMaxSize(), color = t.fondo) {
+        Box(
+            Modifier
                 .fillMaxSize()
-                .background(t.fondo)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .background(
+                    Brush.verticalGradient(
+                        listOf(t.fondo, t.fondo, t.tarjeta.copy(alpha = 0.72f))
+                    )
+                )
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    "CHARM",
-                    color = t.acento,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Text(
-                    "✦  01",
-                    color = t.suave,
-                    fontSize = 9.sp
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            when (pantalla) {
-                "inicio" -> {
-                    Acceso(
-                        if (ingles) "▣  MY TICKET"
-                        else "▣  MI ENTRADA",
-                        t
-                    ) { pantalla = "entrada" }
-
-                    Spacer(Modifier.height(6.dp))
-
-                    Acceso(
-                        if (ingles) "◷  MY AGENDA"
-                        else "◷  MI AGENDA",
-                        t
-                    ) { pantalla = "agenda" }
-
-                    Spacer(Modifier.height(6.dp))
-
-                    Acceso(
-                        if (ingles) "✦  CHARM AI"
-                        else "✦  CHARM IA",
-                        t
-                    ) { pantalla = "asistente" }
-
-                    Spacer(Modifier.height(6.dp))
-
-                    Acceso(
-                        if (ingles) "⚙  SETTINGS"
-                        else "⚙  AJUSTES",
-                        t
-                    ) { pantalla = "ajustes" }
-
-                    Text(
-                        if (ingles) "YOUR NEXT MOMENT"
-                        else "TU PRÓXIMO PLAN",
-                        color = t.suave,
-                        fontSize = 9.sp,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(Modifier.height(10.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(t.tarjeta, CircleShape)
-                            .border(1.dp, t.borde, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "✧",
-                            color = t.acento,
-                            fontSize = 27.sp
-                        )
-                    }
-
-                    Spacer(Modifier.height(9.dp))
-
-                    Text(
-                        evento,
-                        color = t.texto,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 18.sp
-                    )
-
-                    Spacer(Modifier.height(4.dp))
-
-                    Text(
-                        if (ingles) "TODAY · 7:30 PM"
-                        else "HOY · 7:30 PM",
-                        color = t.acento,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Spacer(Modifier.height(12.dp))
-
-                    Tarjeta(t) {
-                        Text(
-                            if (ingles) "YOUR EVENT"
-                            else "TU EVENTO",
-                            color = t.suave,
-                            fontSize = 9.sp
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            if (ingles) "Main stage"
-                            else "Escenario principal",
-                            color = t.texto,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-
-
-                }
-
-                "entrada" -> {
-                    Titulo(
-                        if (ingles) "MY DIGITAL PASS"
-                        else "MI ENTRADA",
-                        t
-                    )
-
-                    Spacer(Modifier.height(12.dp))
-
-                    Tarjeta(t) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
-                            modifier = Modifier
-                                .size(76.dp)
-                                .background(
-                                    Color.White,
-                                    RoundedCornerShape(10.dp)
-                                ),
+                            Modifier
+                                .size(30.dp)
+                                .background(t.acento.copy(alpha = 0.13f), CircleShape)
+                                .border(1.dp, t.acento.copy(alpha = 0.65f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                "▦ ▦ ▦\n▦   ▦\n▦ ▦ ▦",
-                                color = t.fondo,
-                                fontSize = 17.sp,
-                                lineHeight = 19.sp,
-                                textAlign = TextAlign.Center
-                            )
+                            Text("✦", color = t.acento, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
-
-                        Spacer(Modifier.height(10.dp))
-
-                        Text(
-                            evento,
-                            color = t.texto,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(Modifier.height(5.dp))
-
-                        Text(
-                            if (ingles) "DEMO · NOT SCANNABLE"
-                            else "PASE DE DEMOSTRACIÓN",
-                            color = t.acento,
-                            fontSize = 8.sp,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Text(
-                            if (ingles) "Today · 7:30 PM"
-                            else "Hoy · 7:30 PM",
-                            color = t.suave,
-                            fontSize = 10.sp
-                        )
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    Acceso(
-                        if (ingles) "← HOME" else "← INICIO",
-                        t
-                    ) { pantalla = "inicio" }
-                }
-
-                "agenda" -> {
-                    Titulo(
-                        if (ingles) "MY AGENDA" else "MI AGENDA",
-                        t
-                    )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Tarjeta(t) {
-                        if (!permisoCalendario) {
-                            Text(
-                                if (ingles)
-                                    "Allow calendar access to see your real events."
-                                else
-                                    "Autoriza el calendario para ver tus eventos reales.",
-                                color = t.texto,
-                                fontSize = 10.sp,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Acceso(
-                                if (ingles) "ALLOW CALENDAR" else "PERMITIR CALENDARIO",
-                                t
-                            ) {
-                                solicitarPermisoCalendario.launch(
-                                    Manifest.permission.READ_CALENDAR
-                                )
-                            }
-                        } else if (eventosReales.isEmpty()) {
-                            Text(
-                                if (ingles)
-                                    "No events found in the next 7 days."
-                                else
-                                    "No hay eventos en los próximos 7 días.",
-                                color = t.texto,
-                                fontSize = 10.sp,
-                                textAlign = TextAlign.Center
-                            )
-                        } else {
-                            eventosReales.forEach { eventoReal ->
-                                Agenda(
-                                    formatoHora(eventoReal, ingles),
-                                    eventoReal.titulo,
-                                    t
-                                )
-                            }
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text("CHARM", color = t.texto, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+                            Text("SMART MOMENTS", color = t.suave, fontSize = 7.sp, letterSpacing = 1.5.sp)
                         }
                     }
-
-                    Spacer(Modifier.height(12.dp))
-                    Acceso(
-                        if (ingles) "← HOME" else "← INICIO",
-                        t
-                    ) { pantalla = "inicio" }
+                    Text(if (ingles) "SYSTEM ONLINE" else "SISTEMA ACTIVO",
+                        color = t.acento, fontSize = 7.sp, fontWeight = FontWeight.Bold)
                 }
 
-                "asistente" -> {
-                    Titulo(
-                        if (ingles) "CHARM AI" else "CHARM IA",
-                        t
-                    )
+                Spacer(Modifier.height(18.dp))
 
-                    Spacer(Modifier.height(12.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(t.tarjeta, CircleShape)
-                            .border(1.dp, t.borde, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("✦", color = t.acento, fontSize = 24.sp)
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-
-                    Tarjeta(t) {
-                        Text(
-                            if (ingles) "YOUR TIP"
-                            else "TU CONSEJO",
-                            color = t.acento,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(Modifier.height(7.dp))
-
-                        Text(
-                            when (consejoIndex % 3) {
-                                0 -> if (ingles)
-                                    "Arrive 15 minutes early and keep your pass ready."
-                                else
-                                    "Llega 15 minutos antes y ten lista tu entrada."
-                                1 -> if (ingles)
-                                    "Keep your watch charged and check the event schedule."
-                                else
-                                    "Lleva el reloj cargado y revisa los horarios del evento."
-                                else -> if (ingles)
-                                    "Choose a meeting point in case your group gets separated."
-                                else
-                                    "Acuerda un punto de encuentro por si te separas de tu grupo."
-                            },
-                            color = t.texto,
-                            fontSize = 10.sp,
-                            textAlign = TextAlign.Center,
-                            lineHeight = 14.sp
-                        )
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-                    Acceso(
-                        if (ingles) "ANOTHER TIP" else "OTRO CONSEJO",
-                        t
-                    ) { consejoIndex++ }
-
-                    Spacer(Modifier.height(6.dp))
-                    Acceso(
-                        if (ingles) "MY TICKET" else "MI ENTRADA",
-                        t
-                    ) { pantalla = "entrada" }
-
-                    Spacer(Modifier.height(6.dp))
-                    Acceso(
-                        if (ingles) "← HOME" else "← INICIO",
-                        t
-                    ) { pantalla = "inicio" }
-                }
-
-                "ajustes" -> {
-                    Titulo(
-                        if (ingles) "APPEARANCE"
-                        else "APARIENCIA",
-                        t
-                    )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Text(
-                        if (ingles) "CHOOSE A COLOR"
-                        else "ELIGE TU COLOR",
-                        color = t.suave,
-                        fontSize = 9.sp
-                    )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    temas.forEachIndexed { indice, tema ->
-                        Button(
-                            onClick = { temaElegido = indice },
-                            modifier = Modifier
+                when (pantalla) {
+                    "inicio" -> {
+                        Box(
+                            Modifier
                                 .fillMaxWidth()
-                                .height(36.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                backgroundColor = tema.tarjeta,
-                                contentColor = tema.acento
-                            ),
-                            contentPadding = PaddingValues(
-                                horizontal = 8.dp,
-                                vertical = 4.dp
-                            )
+                                .background(
+                                    Brush.linearGradient(listOf(t.tarjeta, t.tarjeta.copy(alpha = 0.62f)))
+                                )
+                                .border(1.dp, t.borde, RoundedCornerShape(24.dp))
+                                .padding(vertical = 20.dp, horizontal = 14.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                when (indice) {
-                                    0 -> if (ingles) "LAVENDER" else "LAVANDA"
-                                    1 -> if (ingles) "MINT" else "MENTA"
-                                    else -> if (ingles) "ROSE" else "ROSA"
-                                } + if (temaElegido == indice) "  ✓" else "",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(if (ingles) "YOUR WORLD, IN SYNC" else "TU MUNDO, EN SINTONÍA",
+                                    color = t.suave, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                                Spacer(Modifier.height(9.dp))
+                                Box(
+                                    Modifier
+                                        .size(92.dp)
+                                        .border(1.dp, t.acento.copy(alpha = 0.3f), CircleShape)
+                                        .padding(7.dp)
+                                        .border(2.dp, t.acento, CircleShape)
+                                        .padding(5.dp)
+                                        .background(t.fondo, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("✦", color = t.acento, fontSize = 18.sp)
+                                        Text("CHARM", color = t.texto, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                                        Text(if (ingles) "READY" else "LISTO", color = t.acento, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Spacer(Modifier.height(12.dp))
+                                Text(nombreEvento, color = t.texto, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                                Text(if (ingles) "YOUR NEXT MOMENT" else "TU PRÓXIMO MOMENTO",
+                                    color = t.acento, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                Spacer(Modifier.height(5.dp))
+                                Text(if (ingles) "Your events and plans, always close." else "Tus eventos y planes, siempre contigo.",
+                                    color = t.suave, fontSize = 9.sp, textAlign = TextAlign.Center)
+                            }
                         }
 
-                        Spacer(Modifier.height(5.dp))
+                        Spacer(Modifier.height(14.dp))
+                        Text(if (ingles) "QUICK ACCESS" else "ACCESO RÁPIDO",
+                            color = t.suave, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Acceso("▦", if (ingles) "MY DIGITAL PASS" else "MI ENTRADA DIGITAL", if (ingles) "Your event pass" else "Tu pase para el evento", t) { pantalla = "entrada" }
+                        Acceso("◷", if (ingles) "MY AGENDA" else "MI AGENDA", if (ingles) "Calendar · next 7 days" else "Calendario · próximos 7 días", t) { pantalla = "agenda" }
+                        Acceso("✧", if (ingles) "CHARM AI" else "CHARM IA", if (ingles) "Tips for your experience" else "Consejos para tu experiencia", t) { pantalla = "asistente" }
+                        Acceso("⚙", if (ingles) "PERSONALIZE" else "PERSONALIZAR", if (ingles) "Language and appearance" else "Idioma y apariencia", t) { pantalla = "ajustes" }
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    "entrada" -> {
+                        Titulo(if (ingles) "DIGITAL PASS" else "ENTRADA DIGITAL", if (ingles) "YOUR EVENT AT A GLANCE" else "TU EVENTO A UN VISTAZO", t)
+                        Spacer(Modifier.height(12.dp))
+                        Tarjeta(t) {
+                            Text("CHARM / PASS 001", color = t.acento, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                            Spacer(Modifier.height(14.dp))
+                            Box(
+                                Modifier.size(92.dp).background(Color.White, RoundedCornerShape(12.dp)).padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("▦ ▦ ▦\n▦   ▦\n▦ ▦ ▦", color = Color(0xFF111827), fontSize = 21.sp, lineHeight = 22.sp, textAlign = TextAlign.Center)
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Text(nombreEvento, color = t.texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                            Text(if (ingles) "DEMO PASS · NOT SCANNABLE" else "PASE DEMO · NO ESCANEABLE",
+                                color = t.acento, fontSize = 8.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                            Spacer(Modifier.height(8.dp))
+                            Text(if (ingles) "Today · 7:30 PM" else "Hoy · 7:30 p. m.", color = t.suave, fontSize = 10.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(if (ingles) "Main stage" else "Escenario principal", color = t.texto, fontSize = 10.sp)
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Acceso("←", if (ingles) "BACK TO HOME" else "VOLVER AL INICIO", "", t) { pantalla = "inicio" }
+                    }
 
-                    Acceso(
-                        if (ingles) "LANGUAGE: EN"
-                        else "IDIOMA: ES",
-                        t
-                    ) { ingles = !ingles }
+                    "agenda" -> {
+                        Titulo(if (ingles) "MY AGENDA" else "MI AGENDA", if (ingles) "THE NEXT SEVEN DAYS" else "LOS PRÓXIMOS SIETE DÍAS", t)
+                        Spacer(Modifier.height(12.dp))
+                        Tarjeta(t) {
+                            if (!permisoCalendario) {
+                                Text(if (ingles) "Allow calendar access to display your real events." else "Autoriza el calendario para mostrar tus eventos reales.",
+                                    color = t.texto, fontSize = 11.sp, textAlign = TextAlign.Center)
+                                Spacer(Modifier.height(10.dp))
+                                Acceso("＋", if (ingles) "ALLOW CALENDAR" else "PERMITIR CALENDARIO", "", t) {
+                                    solicitarPermisoCalendario.launch(Manifest.permission.READ_CALENDAR)
+                                }
+                            } else if (eventosReales.isEmpty()) {
+                                Text(if (ingles) "No events found in the next 7 days." else "No hay eventos en los próximos 7 días.",
+                                    color = t.texto, fontSize = 11.sp, textAlign = TextAlign.Center)
+                            } else {
+                                eventosReales.forEachIndexed { index, item ->
+                                    Agenda(formatoHora(item, ingles), item.titulo, t)
+                                    if (index != eventosReales.lastIndex) Spacer(Modifier.height(4.dp))
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Acceso("←", if (ingles) "BACK TO HOME" else "VOLVER AL INICIO", "", t) { pantalla = "inicio" }
+                    }
 
-                    Spacer(Modifier.height(6.dp))
+                    "asistente" -> {
+                        Titulo(if (ingles) "CHARM AI" else "CHARM IA", if (ingles) "A LITTLE SMARTER, EVERY MOMENT" else "UN TOQUE MÁS INTELIGENTE, CADA MOMENTO", t)
+                        Spacer(Modifier.height(14.dp))
+                        Box(
+                            Modifier.size(74.dp).background(t.acento.copy(alpha = 0.1f), CircleShape)
+                                .border(1.dp, t.acento.copy(alpha = 0.7f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) { Text("✧", color = t.acento, fontSize = 38.sp, fontWeight = FontWeight.Light) }
+                        Spacer(Modifier.height(14.dp))
+                        Tarjeta(t) {
+                            Text(if (ingles) "YOUR SMART TIP" else "TU CONSEJO INTELIGENTE",
+                                color = t.acento, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                when (consejoIndex % 3) {
+                                    0 -> if (ingles) "Arrive 15 minutes early and keep your pass ready." else "Llega 15 minutos antes y ten lista tu entrada."
+                                    1 -> if (ingles) "Keep your watch charged and check the event schedule." else "Lleva el reloj cargado y revisa los horarios del evento."
+                                    else -> if (ingles) "Choose a meeting point in case your group gets separated." else "Acuerda un punto de encuentro por si te separas de tu grupo."
+                                },
+                                color = t.texto, fontSize = 12.sp, textAlign = TextAlign.Center, lineHeight = 18.sp
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Acceso("✧", if (ingles) "ANOTHER TIP" else "OTRO CONSEJO", if (ingles) "Discover another suggestion" else "Descubre otra sugerencia", t) { consejoIndex++ }
+                        Acceso("▦", if (ingles) "MY DIGITAL PASS" else "MI ENTRADA DIGITAL", "", t) { pantalla = "entrada" }
+                        Acceso("←", if (ingles) "BACK TO HOME" else "VOLVER AL INICIO", "", t) { pantalla = "inicio" }
+                    }
 
-                    Acceso(
-                        if (ingles) {
-                            if (modoOscuro) "THEME: DARK" else "THEME: LIGHT"
+                    "ajustes" -> {
+                        Titulo(if (ingles) "PERSONALIZATION" else "PERSONALIZACIÓN", if (ingles) "MAKE CHARM YOURS" else "HAZ CHARM A TU MANERA", t)
+                        Spacer(Modifier.height(12.dp))
+                        Tarjeta(t) {
+                            Text(if (ingles) "COLOR SIGNATURE" else "COLOR DE IDENTIDAD",
+                                color = t.suave, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                            Spacer(Modifier.height(10.dp))
+                            listOf(
+                                Pair(if (ingles) "CYBER CYAN" else "CIAN CIBERNÉTICO", Color(0xFF36E7FF)),
+                                Pair(if (ingles) "NEBULA VIOLET" else "VIOLETA NÉBULA", Color(0xFF8B7CFF)),
+                                Pair(if (ingles) "LASER PINK" else "ROSA LÁSER", Color(0xFFFF70C8))
+                            ).forEachIndexed { index, item ->
+                                Button(
+                                    onClick = { acentoElegido = index },
+                                    modifier = Modifier.fillMaxWidth().height(42.dp).padding(vertical = 2.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        backgroundColor = if (acentoElegido == index) item.second.copy(alpha = 0.18f) else t.tarjeta,
+                                        contentColor = t.texto
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 5.dp)
+                                ) {
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                        Box(Modifier.size(12.dp).background(item.second, CircleShape))
+                                        Spacer(Modifier.width(10.dp))
+                                        Text(item.first, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                        Spacer(Modifier.weight(1f))
+                                        Text(if (acentoElegido == index) "✓" else "○", color = item.second, fontSize = 13.sp)
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Acceso("文", if (ingles) "LANGUAGE · ENGLISH" else "IDIOMA · ESPAÑOL",
+                            if (ingles) "Tap to switch to Spanish" else "Toca para cambiar a inglés", t) { ingles = !ingles }
+                        Acceso(if (modoOscuro) "☾" else "☀", if (ingles) {
+                            if (modoOscuro) "DARK MODE" else "LIGHT MODE"
                         } else {
-                            if (modoOscuro) "TEMA: OSCURO" else "TEMA: CLARO"
-                        },
-                        t
-                    ) { modoOscuro = !modoOscuro }
-
-                    Spacer(Modifier.height(6.dp))
-
-                    Acceso(
-                        if (ingles) "← HOME" else "← INICIO",
-                        t
-                    ) { pantalla = "inicio" }
+                            if (modoOscuro) "MODO OSCURO" else "MODO CLARO"
+                        }, if (ingles) "Tap to change appearance" else "Toca para cambiar la apariencia", t) { modoOscuro = !modoOscuro }
+                        Spacer(Modifier.height(8.dp))
+                        Acceso("←", if (ingles) "BACK TO HOME" else "VOLVER AL INICIO", "", t) { pantalla = "inicio" }
+                    }
                 }
+
+                Spacer(Modifier.height(18.dp))
+                Text("CHARM  •  MADE FOR YOUR MOMENTS",
+                    color = t.suave.copy(alpha = 0.75f), fontSize = 7.sp,
+                    textAlign = TextAlign.Center, letterSpacing = 1.sp)
+                Spacer(Modifier.height(8.dp))
             }
-
-            Spacer(Modifier.height(12.dp))
-
-            Text(
-                "MADE FOR YOUR MOMENTS",
-                color = t.suave,
-                fontSize = 7.sp,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(Modifier.height(6.dp))
         }
     }
 }
 
 @Composable
-private fun Titulo(texto: String, t: Tema) {
-    Text(
-        texto,
-        color = t.acento,
-        fontSize = 13.sp,
-        fontWeight = FontWeight.Bold,
-        textAlign = TextAlign.Center
-    )
+private fun Titulo(titulo: String, subtitulo: String, t: Tema) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(titulo, color = t.texto, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(5.dp))
+        Text(subtitulo, color = t.acento, fontSize = 7.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, textAlign = TextAlign.Center)
+    }
 }
 
 @Composable
-private fun Tarjeta(
-    t: Tema,
-    contenido: @Composable ColumnScope.() -> Unit
-) {
+private fun Tarjeta(t: Tema, contenido: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(t.tarjeta, RoundedCornerShape(15.dp))
-            .border(1.dp, t.borde, RoundedCornerShape(15.dp))
-            .padding(horizontal = 10.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth()
+            .background(t.tarjeta, RoundedCornerShape(22.dp))
+            .border(1.dp, t.borde, RoundedCornerShape(22.dp))
+            .padding(horizontal = 14.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         content = contenido
     )
@@ -636,54 +421,58 @@ private fun Tarjeta(
 
 @Composable
 private fun Acceso(
-    texto: String,
+    icono: String,
+    titulo: String,
+    subtitulo: String,
     t: Tema,
     accion: () -> Unit
 ) {
     Button(
         onClick = accion,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(42.dp),
-        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).defaultMinSize(minHeight = 50.dp),
+        shape = RoundedCornerShape(17.dp),
         colors = ButtonDefaults.buttonColors(
             backgroundColor = t.tarjeta,
-            contentColor = t.acento
+            contentColor = t.texto
         ),
-        contentPadding = PaddingValues(
-            horizontal = 5.dp,
-            vertical = 3.dp
-        )
+        elevation = ButtonDefaults.elevation(defaultElevation = 0.dp, pressedElevation = 2.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp)
     ) {
-        Text(
-            texto,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            maxLines = 2
-        )
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(32.dp).background(t.acento.copy(alpha = 0.12f), RoundedCornerShape(11.dp))
+                    .border(1.dp, t.acento.copy(alpha = 0.35f), RoundedCornerShape(11.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(icono, color = t.acento, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                Text(titulo, color = t.texto, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.35.sp)
+                if (subtitulo.isNotBlank()) {
+                    Spacer(Modifier.height(3.dp))
+                    Text(subtitulo, color = t.suave, fontSize = 8.sp, lineHeight = 11.sp)
+                }
+            }
+            Text("›", color = t.acento, fontSize = 22.sp, fontWeight = FontWeight.Light)
+        }
     }
 }
 
 @Composable
 private fun Agenda(hora: String, actividad: String, t: Tema) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
+        Modifier.fillMaxWidth()
+            .background(t.fondo.copy(alpha = 0.55f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            hora,
-            color = t.acento,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            actividad,
-            color = t.texto,
-            fontSize = 10.sp
-        )
+        Box(Modifier.width(3.dp).height(30.dp).background(t.acento, RoundedCornerShape(2.dp)))
+        Spacer(Modifier.width(9.dp))
+        Column(Modifier.weight(1f)) {
+            Text(hora, color = t.acento, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(3.dp))
+            Text(actividad, color = t.texto, fontSize = 10.sp, lineHeight = 13.sp)
+        }
     }
 }
