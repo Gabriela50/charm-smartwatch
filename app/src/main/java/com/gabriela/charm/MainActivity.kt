@@ -155,10 +155,13 @@ fun PantallaCHARM() {
         ActivityResultContracts.RequestPermission()
     ) { concedido -> permisoCalendario = concedido }
 
+    val preferencias = remember {
+        contexto.getSharedPreferences("charm_preferencias", Context.MODE_PRIVATE)
+    }
     var pantalla by remember { mutableStateOf("inicio") }
-    var ingles by remember { mutableStateOf(false) }
-    var acentoElegido by remember { mutableStateOf(0) }
-    var modoOscuro by remember { mutableStateOf(true) }
+    var ingles by remember { mutableStateOf(preferencias.getBoolean("ingles", false)) }
+    var acentoElegido by remember { mutableStateOf(preferencias.getInt("acentoElegido", 0).coerceIn(0, 2)) }
+    var modoOscuro by remember { mutableStateOf(preferencias.getBoolean("modoOscuro", true)) }
     var consejoIndex by remember { mutableStateOf(0) }
     val t = crearTema(modoOscuro, acentoElegido)
     val nombreEvento = if (ingles) "Lights Festival" else "Festival de Luces"
@@ -356,7 +359,10 @@ fun PantallaCHARM() {
                                 Pair(if (ingles) "LASER PINK" else "ROSA LÁSER", Color(0xFFFF70C8))
                             ).forEachIndexed { index, item ->
                                 Button(
-                                    onClick = { acentoElegido = index },
+                                    onClick = {
+                                        acentoElegido = index
+                                        preferencias.edit().putInt("acentoElegido", index).apply()
+                                    },
                                     modifier = Modifier.fillMaxWidth().height(42.dp).padding(vertical = 2.dp),
                                     shape = RoundedCornerShape(14.dp),
                                     colors = ButtonDefaults.buttonColors(
@@ -377,12 +383,20 @@ fun PantallaCHARM() {
                         }
                         Spacer(Modifier.height(10.dp))
                         Acceso("文", if (ingles) "LANGUAGE · ENGLISH" else "IDIOMA · ESPAÑOL",
-                            if (ingles) "Tap to switch to Spanish" else "Toca para cambiar a inglés", t) { ingles = !ingles }
+                            if (ingles) "Tap to switch to Spanish" else "Toca para cambiar a inglés", t) {
+                            val nuevoIdioma = !ingles
+                            ingles = nuevoIdioma
+                            preferencias.edit().putBoolean("ingles", nuevoIdioma).apply()
+                        }
                         Acceso(if (modoOscuro) "☾" else "☀", if (ingles) {
                             if (modoOscuro) "DARK MODE" else "LIGHT MODE"
                         } else {
                             if (modoOscuro) "MODO OSCURO" else "MODO CLARO"
-                        }, if (ingles) "Tap to change appearance" else "Toca para cambiar la apariencia", t) { modoOscuro = !modoOscuro }
+                        }, if (ingles) "Tap to change appearance" else "Toca para cambiar la apariencia", t) {
+                            val nuevoTema = !modoOscuro
+                            modoOscuro = nuevoTema
+                            preferencias.edit().putBoolean("modoOscuro", nuevoTema).apply()
+                        }
                         Spacer(Modifier.height(8.dp))
                         Acceso("←", if (ingles) "BACK TO HOME" else "VOLVER AL INICIO", "", t) { pantalla = "inicio" }
                     }
