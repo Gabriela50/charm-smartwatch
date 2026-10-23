@@ -269,28 +269,127 @@ fun PantallaCHARM() {
                     }
 
                     "entrada" -> {
-                        Titulo(if (ingles) "DIGITAL PASS" else "ENTRADA DIGITAL", if (ingles) "YOUR EVENT AT A GLANCE" else "TU EVENTO A UN VISTAZO", t)
+                        Titulo(
+                            if (ingles) "DIGITAL PASS" else "ENTRADA DIGITAL",
+                            if (ingles) "YOUR EVENT AT A GLANCE" else "TU EVENTO A UN VISTAZO",
+                            t
+                        )
                         Spacer(Modifier.height(12.dp))
                         Tarjeta(t) {
-                            Text("CHARM / PASS 001", color = t.acento, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-                            Spacer(Modifier.height(14.dp))
                             Box(
-                                Modifier.size(92.dp).background(Color.White, RoundedCornerShape(12.dp)).padding(8.dp),
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(t.acento.copy(alpha = 0.10f), RoundedCornerShape(14.dp))
+                                    .border(1.dp, t.acento.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                                    .padding(vertical = 12.dp, horizontal = 10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("▦ ▦ ▦\n▦   ▦\n▦ ▦ ▦", color = Color(0xFF111827), fontSize = 21.sp, lineHeight = 22.sp, textAlign = TextAlign.Center)
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        "CHARM  /  PASS 001",
+                                        color = t.acento,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.5.sp
+                                    )
+                                    Spacer(Modifier.height(5.dp))
+                                    Text(
+                                        if (ingles) "EVENT PREVIEW" else "VISTA PREVIA DEL EVENTO",
+                                        color = t.suave,
+                                        fontSize = 7.sp,
+                                        letterSpacing = 1.sp
+                                    )
+                                }
                             }
-                            Spacer(Modifier.height(12.dp))
-                            Text(nombreEvento, color = t.texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                            Text(if (ingles) "DEMO PASS · NOT SCANNABLE" else "PASE DEMO · NO ESCANEABLE",
-                                color = t.acento, fontSize = 8.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                            Spacer(Modifier.height(8.dp))
-                            Text(if (ingles) "Today · 7:30 PM" else "Hoy · 7:30 p. m.", color = t.suave, fontSize = 10.sp)
-                            Spacer(Modifier.height(8.dp))
-                            Text(if (ingles) "Main stage" else "Escenario principal", color = t.texto, fontSize = 10.sp)
+
+                            Spacer(Modifier.height(18.dp))
+                            Box(
+                                Modifier
+                                    .size(96.dp)
+                                    .background(Color.White, RoundedCornerShape(14.dp))
+                                    .border(1.dp, t.acento.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+                                    .padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "✦\nCHARM\n✦",
+                                    color = Color(0xFF111827),
+                                    fontSize = 17.sp,
+                                    lineHeight = 21.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+
+                            Spacer(Modifier.height(14.dp))
+                            Text(
+                                nombreEvento,
+                                color = t.texto,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                if (ingles) "DEMO · NOT A VALID TICKET" else "DEMOSTRACIÓN · NO ES UNA ENTRADA VÁLIDA",
+                                color = t.acento,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(Modifier.height(14.dp))
+                            Box(
+                                Modifier.fillMaxWidth()
+                                    .background(t.fondo, RoundedCornerShape(12.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        if (ingles) "DATE & TIME" else "FECHA Y HORA",
+                                        color = t.suave,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        if (ingles) "Demo · 7:30 PM" else "Demostración · 7:30 p. m.",
+                                        color = t.texto,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(Modifier.height(10.dp))
+                                    Text(
+                                        if (ingles) "LOCATION" else "UBICACIÓN",
+                                        color = t.suave,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        if (ingles) "Main stage · demo" else "Escenario principal · demo",
+                                        color = t.texto,
+                                        fontSize = 10.sp,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                if (ingles) "This preview has no scannable QR code." else "Esta vista previa no contiene un código QR escaneable.",
+                                color = t.suave,
+                                fontSize = 8.sp,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 12.sp
+                            )
                         }
                         Spacer(Modifier.height(12.dp))
-                        Acceso("←", if (ingles) "BACK TO HOME" else "VOLVER AL INICIO", "", t) { pantalla = "inicio" }
+                        Acceso(
+                            "←",
+                            if (ingles) "BACK TO HOME" else "VOLVER AL INICIO",
+                            "",
+                            t
+                        ) { pantalla = "inicio" }
                     }
 
                     "agenda" -> {
