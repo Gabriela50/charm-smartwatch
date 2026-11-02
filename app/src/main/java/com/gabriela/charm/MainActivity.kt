@@ -37,6 +37,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material.TextField
 
 private data class EventoReal(
     val titulo: String,
@@ -163,6 +164,8 @@ fun PantallaCHARM() {
     var acentoElegido by remember { mutableStateOf(preferencias.getInt("acentoElegido", 0).coerceIn(0, 2)) }
     var modoOscuro by remember { mutableStateOf(preferencias.getBoolean("modoOscuro", true)) }
     var consejoIndex by remember { mutableStateOf(0) }
+    var preguntaIA by remember { mutableStateOf("") }
+    var respuestaIA by remember { mutableStateOf("") }
     val t = crearTema(modoOscuro, acentoElegido)
     val nombreEvento = if (ingles) "Lights Festival" else "Festival de Luces"
 
@@ -417,33 +420,165 @@ fun PantallaCHARM() {
                         Acceso("←", if (ingles) "BACK TO HOME" else "VOLVER AL INICIO", "", t) { pantalla = "inicio" }
                     }
 
-                    "asistente" -> {
-                        Titulo(if (ingles) "CHARM AI" else "CHARM IA", if (ingles) "A LITTLE SMARTER, EVERY MOMENT" else "UN TOQUE MÁS INTELIGENTE, CADA MOMENTO", t)
-                        Spacer(Modifier.height(14.dp))
-                        Box(
-                            Modifier.size(74.dp).background(t.acento.copy(alpha = 0.1f), CircleShape)
-                                .border(1.dp, t.acento.copy(alpha = 0.7f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) { Text("✧", color = t.acento, fontSize = 38.sp, fontWeight = FontWeight.Light) }
-                        Spacer(Modifier.height(14.dp))
-                        Tarjeta(t) {
-                            Text(if (ingles) "YOUR SMART TIP" else "TU CONSEJO INTELIGENTE",
-                                color = t.acento, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                when (consejoIndex % 3) {
-                                    0 -> if (ingles) "Arrive 15 minutes early and keep your pass ready." else "Llega 15 minutos antes y ten lista tu entrada."
-                                    1 -> if (ingles) "Keep your watch charged and check the event schedule." else "Lleva el reloj cargado y revisa los horarios del evento."
-                                    else -> if (ingles) "Choose a meeting point in case your group gets separated." else "Acuerda un punto de encuentro por si te separas de tu grupo."
-                                },
-                                color = t.texto, fontSize = 12.sp, textAlign = TextAlign.Center, lineHeight = 18.sp
-                            )
+     "asistente" -> {
+        Titulo(
+            if (ingles) "CHARM AI" else "CHARM IA",
+            if (ingles) "YOUR PERSONAL SMART ASSISTANT" else "TU ASISTENTE INTELIGENTE",
+            t
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        Box(
+            Modifier.size(64.dp)
+                .background(t.acento.copy(alpha = 0.1f), CircleShape)
+                .border(1.dp, t.acento.copy(alpha = 0.7f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("✧", color = t.acento, fontSize = 34.sp)
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Tarjeta(t) {
+            Text(
+                if (ingles) "ASK CHARM ANYTHING" else "PREGÚNTALE A CHARM",
+                color = t.acento,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            TextField(
+                value = preguntaIA,
+                onValueChange = { preguntaIA = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = {
+                    Text(if (ingles) "Write your question..." else "Escribe tu pregunta...")
+                }
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            Button(
+                onClick = {
+                    val consulta = preguntaIA.lowercase(Locale.getDefault())
+
+                    respuestaIA = when {
+                        consulta.contains("agenda") ||
+                        consulta.contains("calendario") ||
+                        consulta.contains("calendar") ||
+                        consulta.contains("event") -> {
+                            if (ingles)
+                                "Go to MY AGENDA to view calendar events from the next 7 days. Calendar permission is required."
+                            else
+                                "Entra en MI AGENDA para consultar los eventos de los próximos 7 días. Necesitas conceder permiso al calendario."
                         }
-                        Spacer(Modifier.height(12.dp))
-                        Acceso("✧", if (ingles) "ANOTHER TIP" else "OTRO CONSEJO", if (ingles) "Discover another suggestion" else "Descubre otra sugerencia", t) { consejoIndex++ }
-                        Acceso("▦", if (ingles) "MY DIGITAL PASS" else "MI ENTRADA DIGITAL", "", t) { pantalla = "entrada" }
-                        Acceso("←", if (ingles) "BACK TO HOME" else "VOLVER AL INICIO", "", t) { pantalla = "inicio" }
+
+                        consulta.contains("entrada") ||
+                        consulta.contains("pase") ||
+                        consulta.contains("pass") ||
+                        consulta.contains("ticket") -> {
+                            if (ingles)
+                                "Open MY DIGITAL PASS to see your digital pass screen."
+                            else
+                                "Abre MI ENTRADA para consultar la pantalla de tu entrada digital."
+                        }
+
+                        consulta.contains("idioma") ||
+                        consulta.contains("language") ||
+                        consulta.contains("english") ||
+                        consulta.contains("español") -> {
+                            if (ingles)
+                                "Go to PERSONALIZATION and select the language option to switch to Spanish."
+                            else
+                                "Ve a PERSONALIZACIÓN y utiliza la opción de idioma para cambiar entre español e inglés."
+                        }
+
+                        consulta.contains("color") ||
+                        consulta.contains("tema") ||
+                        consulta.contains("oscuro") ||
+                        consulta.contains("claro") ||
+                        consulta.contains("theme") -> {
+                            if (ingles)
+                                "In PERSONALIZATION you can change the accent color and switch between light and dark mode."
+                            else
+                                "En PERSONALIZACIÓN puedes cambiar el color de identidad y alternar entre modo claro y oscuro."
+                        }
+
+                        consulta.contains("ayuda") ||
+                        consulta.contains("help") ||
+                        consulta.contains("puedes") ||
+                        consulta.contains("hacer") ||
+                        consulta.contains("do") -> {
+                            if (ingles)
+                                "I can help you explore your digital pass, calendar agenda, language and appearance settings."
+                            else
+                                "Puedo ayudarte a conocer tu entrada digital, agenda del calendario, idioma y ajustes de apariencia."
+                        }
+
+                        else -> {
+                            if (ingles)
+                                "I can help with your agenda, digital pass, language and personalization. Try asking about one of these features."
+                            else
+                                "Puedo ayudarte con tu agenda, entrada digital, idioma y personalización. Prueba preguntarme por alguna de estas funciones."
+                        }
                     }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = t.acento,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(if (ingles) "ASK CHARM ✧" else "PREGUNTAR A CHARM ✧")
+            }
+
+            if (respuestaIA.isNotEmpty()) {
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    if (ingles) "CHARM'S ANSWER" else "RESPUESTA DE CHARM",
+                    color = t.acento,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    respuestaIA,
+                    color = t.texto,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 18.sp
+                )
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Acceso(
+            "✧",
+            if (ingles) "ANOTHER TIP" else "OTRO CONSEJO",
+            if (ingles) "Discover another suggestion" else "Descubre otra sugerencia",
+            t
+        ) { consejoIndex++ }
+
+        Acceso(
+            "▦",
+            if (ingles) "MY DIGITAL PASS" else "MI ENTRADA DIGITAL",
+            "",
+            t
+        ) { pantalla = "entrada" }
+
+        Acceso(
+            "←",
+            if (ingles) "BACK TO HOME" else "VOLVER AL INICIO",
+            "",
+            t
+        ) { pantalla = "inicio" }
+    }
+
 
                     "ajustes" -> {
                         Titulo(if (ingles) "PERSONALIZATION" else "PERSONALIZACIÓN", if (ingles) "MAKE CHARM YOURS" else "HAZ CHARM A TU MANERA", t)
