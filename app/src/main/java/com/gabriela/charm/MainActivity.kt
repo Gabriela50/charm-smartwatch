@@ -33,6 +33,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -89,6 +94,29 @@ private fun leerEventosCalendario(context: Context): List<EventoReal> {
         // La pantalla de agenda informa si no hay eventos disponibles.
     }
     return eventos
+}
+
+private fun crearEventosDemo(ingles: Boolean): List<EventoReal> {
+    val ahora = System.currentTimeMillis()
+    val bloque = (ahora / 300000L).toInt()
+    val muestras = if (ingles) listOf(
+        "Live music · Plaza del Carnaval",
+        "Cultural exhibition · Centro Cultural Pandiaco",
+        "Food fair · Plaza de Nariño",
+        "Historic center walk · Centro de Pasto",
+        "Art showcase · Teatro Imperial"
+    ) else listOf(
+        "Música en vivo · Plaza del Carnaval",
+        "Muestra cultural · Centro Cultural Pandiaco",
+        "Feria gastronómica · Plaza de Nariño",
+        "Recorrido por el centro histórico de Pasto",
+        "Muestra artística · Teatro Imperial"
+    )
+    val rotacion = Math.floorMod(bloque, muestras.size)
+    return (0 until 3).map { indice ->
+        val posicion = (rotacion + indice) % muestras.size
+        EventoReal(muestras[posicion], ahora + (15L + indice * 35L) * 60000L, false)
+    }
 }
 
 private fun formatoHora(evento: EventoReal, ingles: Boolean): String {
@@ -152,6 +180,7 @@ fun PantallaCHARM() {
         )
     }
     var eventosReales by remember { mutableStateOf<List<EventoReal>>(emptyList()) }
+    var eventosSonDemo by remember { mutableStateOf(false) }
     val solicitarPermisoCalendario = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { concedido -> permisoCalendario = concedido }
@@ -166,12 +195,21 @@ fun PantallaCHARM() {
     var consejoIndex by remember { mutableStateOf(0) }
     var preguntaIA by remember { mutableStateOf("") }
     var respuestaIA by remember { mutableStateOf("") }
+    var cargandoIA by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val t = crearTema(modoOscuro, acentoElegido)
     val nombreEvento = if (ingles) "Lights Festival" else "Festival de Luces"
 
-    LaunchedEffect(pantalla, permisoCalendario) {
-        if (pantalla == "agenda" && permisoCalendario) {
-            eventosReales = withContext(Dispatchers.IO) { leerEventosCalendario(contexto) }
+    LaunchedEffect(pantalla, permisoCalendario, ingles) {
+        if (pantalla == "agenda") {
+            while (true) {
+                val reales = if (permisoCalendario) {
+                    withContext(Dispatchers.IO) { leerEventosCalendario(contexto) }
+                } else emptyList()
+                eventosSonDemo = reales.isEmpty()
+                eventosReales = if (reales.isEmpty()) crearEventosDemo(ingles) else reales
+                delay(300000L)
+            }
         }
     }
 
@@ -406,14 +444,29 @@ fun PantallaCHARM() {
                                 Acceso("＋", if (ingles) "ALLOW CALENDAR" else "PERMITIR CALENDARIO", "", t) {
                                     solicitarPermisoCalendario.launch(Manifest.permission.READ_CALENDAR)
                                 }
-                            } else if (eventosReales.isEmpty()) {
-                                Text(if (ingles) "No events found in the next 7 days." else "No hay eventos en los próximos 7 días.",
-                                    color = t.texto, fontSize = 11.sp, textAlign = TextAlign.Center)
                             } else {
+                                if (eventosSonDemo) {
+                                    Text(
+                                        if (ingles) "SIMULATED PASTO EVENTS · DEMO" else "EVENTOS SIMULADOS DE PASTO · DEMOSTRACIÓN",
+                                        color = t.acento, fontSize = 9.sp, fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                }
                                 eventosReales.forEachIndexed { index, item ->
-                                    Agenda(formatoHora(item, ingles), item.titulo, t)
+                                    Agenda(
+                                        formatoHora(item, ingles),
+                                        item.titulo,
+                                        t,
+                                        if (eventosSonDemo) if (ingles) "DEMO" else "SIMULADO" else null
+                                    )
                                     if (index != eventosReales.lastIndex) Spacer(Modifier.height(4.dp))
                                 }
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    if (ingles) "Refreshes every 5 minutes" else "Se actualiza cada 5 minutos",
+                                    color = t.suave, fontSize = 8.sp, textAlign = TextAlign.Center
+                                )
                             }
                         }
                         Spacer(Modifier.height(12.dp))
@@ -464,76 +517,78 @@ fun PantallaCHARM() {
 
             Button(
                 onClick = {
-                    val consulta = preguntaIA.lowercase(Locale.getDefault())
+                    val consulta = preguntaIA.trim()
+                    val idioma = if (ingles) "en" else "es"
+                    val mensajeConexion = if (ingles)
+                        "Could not connect to CHARM AI. Check that the server on your Mac is running."
+                    else
+                        "No se pudo conectar con CHARM IA. Comprueba que el servidor del Mac esté activo."
+                    val mensajeVacio = if (ingles) "No answer received." else "No se recibió una respuesta."
+                    val mensajeError = if (ingles) "CHARM AI could not respond." else "CHARM IA no pudo responder."
 
-                    respuestaIA = when {
-                        consulta.contains("agenda") ||
-                        consulta.contains("calendario") ||
-                        consulta.contains("calendar") ||
-                        consulta.contains("event") -> {
-                            if (ingles)
-                                "Go to MY AGENDA to view calendar events from the next 7 days. Calendar permission is required."
-                            else
-                                "Entra en MI AGENDA para consultar los eventos de los próximos 7 días. Necesitas conceder permiso al calendario."
-                        }
+                    scope.launch {
+                        if (consulta.isBlank()) {
+                            respuestaIA = if (ingles) "Write a question first." else "Escribe una pregunta primero."
+                        } else {
+                            cargandoIA = true
+                            respuestaIA = ""
+                            try {
+                                respuestaIA = withContext(Dispatchers.IO) {
+                                    val connection = URL("http://" + "10.0.2.2:3002/api/assistant")
+                                        .openConnection() as HttpURLConnection
+                                    try {
+                                        connection.requestMethod = "POST"
+                                        connection.connectTimeout = 10000
+                                        connection.readTimeout = 35000
+                                        connection.doOutput = true
+                                        connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
 
-                        consulta.contains("entrada") ||
-                        consulta.contains("pase") ||
-                        consulta.contains("pass") ||
-                        consulta.contains("ticket") -> {
-                            if (ingles)
-                                "Open MY DIGITAL PASS to see your digital pass screen."
-                            else
-                                "Abre MI ENTRADA para consultar la pantalla de tu entrada digital."
-                        }
+                                        val body = JSONObject()
+                                            .put("prompt", consulta)
+                                            .put("language", idioma)
+                                            .toString()
 
-                        consulta.contains("idioma") ||
-                        consulta.contains("language") ||
-                        consulta.contains("english") ||
-                        consulta.contains("español") -> {
-                            if (ingles)
-                                "Go to PERSONALIZATION and select the language option to switch to Spanish."
-                            else
-                                "Ve a PERSONALIZACIÓN y utiliza la opción de idioma para cambiar entre español e inglés."
-                        }
+                                        connection.outputStream.use {
+                                            it.write(body.toByteArray(Charsets.UTF_8))
+                                        }
 
-                        consulta.contains("color") ||
-                        consulta.contains("tema") ||
-                        consulta.contains("oscuro") ||
-                        consulta.contains("claro") ||
-                        consulta.contains("theme") -> {
-                            if (ingles)
-                                "In PERSONALIZATION you can change the accent color and switch between light and dark mode."
-                            else
-                                "En PERSONALIZACIÓN puedes cambiar el color de identidad y alternar entre modo claro y oscuro."
-                        }
+                                        val code = connection.responseCode
+                                        val stream = if (code in 200..299)
+                                            connection.inputStream else connection.errorStream
+                                        val responseText = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                                        val json = JSONObject(responseText)
 
-                        consulta.contains("ayuda") ||
-                        consulta.contains("help") ||
-                        consulta.contains("puedes") ||
-                        consulta.contains("hacer") ||
-                        consulta.contains("do") -> {
-                            if (ingles)
-                                "I can help you explore your digital pass, calendar agenda, language and appearance settings."
-                            else
-                                "Puedo ayudarte a conocer tu entrada digital, agenda del calendario, idioma y ajustes de apariencia."
-                        }
-
-                        else -> {
-                            if (ingles)
-                                "I can help with your agenda, digital pass, language and personalization. Try asking about one of these features."
-                            else
-                                "Puedo ayudarte con tu agenda, entrada digital, idioma y personalización. Prueba preguntarme por alguna de estas funciones."
+                                        if (code in 200..299)
+                                            json.optString("answer").ifBlank { mensajeVacio }
+                                        else
+                                            json.optString("error").ifBlank { mensajeError }
+                                    } finally {
+                                        connection.disconnect()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                respuestaIA = mensajeConexion
+                            } finally {
+                                cargandoIA = false
+                            }
                         }
                     }
                 },
+                enabled = !cargandoIA && preguntaIA.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = t.acento,
                     contentColor = Color.White
                 )
             ) {
-                Text(if (ingles) "ASK CHARM ✧" else "PREGUNTAR A CHARM ✧")
+                Text(
+                    when {
+                        cargandoIA && ingles -> "CONNECTING..."
+                        cargandoIA -> "CONECTANDO..."
+                        ingles -> "ASK CHARM ✧"
+                        else -> "PREGUNTAR A CHARM ✧"
+                    }
+                )
             }
 
             if (respuestaIA.isNotEmpty()) {
@@ -708,7 +763,7 @@ private fun Acceso(
 }
 
 @Composable
-private fun Agenda(hora: String, actividad: String, t: Tema) {
+private fun Agenda(hora: String, actividad: String, t: Tema, etiqueta: String? = null) {
     Row(
         Modifier.fillMaxWidth()
             .background(t.fondo.copy(alpha = 0.55f), RoundedCornerShape(12.dp))
@@ -721,6 +776,10 @@ private fun Agenda(hora: String, actividad: String, t: Tema) {
             Text(hora, color = t.acento, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(3.dp))
             Text(actividad, color = t.texto, fontSize = 10.sp, lineHeight = 13.sp)
+            if (etiqueta != null) {
+                Spacer(Modifier.height(3.dp))
+                Text(etiqueta, color = t.acento, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
